@@ -15,81 +15,83 @@
 			</v-form>
 			<v-row>
 				<v-col
-					cols="2"
-					v-for="pokemon in filtered_pokemons" 
+					cols="6"
+					md="2"
+					v-for="pokemon in filteredPokemons" 
 					:key="pokemon.name">
-					<v-card @click="toggleModal(getId(pokemon))">
-						<v-container>
-							<v-row class="mx-0 d-flex justify-center">
-								<img :src="`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${getId(pokemon)}.png`"
-								:alt="pokemon.name"
-								class="pokemon-name" />
-								<h2 class="text-center text-capitalize">{{pokemon.name}}</h2>
-							</v-row>
-						</v-container>
-					</v-card>
+					<PokemonCard :pokemon="pokemon" @clicked="show_pokemon" />
 				</v-col>
 			</v-row>
 		</v-container>
 		
-		<div class="text-center">
-			<v-dialog v-model="showModal" width="800">
-				<v-card v-if="selectedPokemon">
-					<v-container>
-						<v-row class="d-flex align-center">
-							<v-col cols="4">
-								<img :src="`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${selectedPokemon.id}.png`"
-								:alt="selectedPokemon.name"
-								class="pokemon-name">
-							</v-col>
-							<v-col cols="8">
-								<h1 class="text-capitalize">{{ selectedPokemon.name }}</h1>
-							</v-col>
-						</v-row>
-					</v-container>
-				</v-card>
-			</v-dialog>
-  		</div>
+		<PokemonInfoDialog
+			v-model:show="show_dialog"
+			:selected_pokemon="selected_pokemon"
+    	/>
 	</v-app>
 </template>
 
 <script>
 
 import axios from 'axios'
+import PokemonCard from "./components/PokemonCard.vue";
+import PokemonInfoDialog from "./components/PokemonInfoDialog.vue";
 
 export default {
 	name: 'App',
+
+	components: {
+		PokemonCard,
+		PokemonInfoDialog,
+  	},
 	
 	data() {
 		return {
 			pokemons: [],
 			search: "",
-			showModal: false,
-			selectedPokemon: null,
-		}
+			show_dialog: false,
+			selected_pokemon: null,
+		};
 	},
 
 	mounted() {
-		axios.get("https://pokeapi.co/api/v2/pokemon?limit=151").then((response) => {
+		axios.get("https://pokeapi.co/api/v2/pokemon?limit=251").then((response) => {
 			this.pokemons = response.data.results;
 		})
 	},
 
 	methods: {
-		getId(pokemon) {
-			return pokemon.url.split("/")[6];
-		},
-
-		toggleModal(id) {
+		show_pokemon(id) {
 			axios.get(`https://pokeapi.co/api/v2/pokemon/${id}`).then((response) => {
-				console.log(response)
-				this.selectedPokemon = response.data;
-				this.showModal = !this.showModal;
+				this.selected_pokemon = response.data;
+				this.show_dialog = !this.show_dialog;
 			});
 		},
+
+		getMoveLevel(move) {
+			for (let version of move.version_group_details) {
+				if ( version.version_group.name == "sword-shield" && version.move_learn_method.name == "level-up") {
+					return version.level_learned_at;
+				}
+			}
+			return 0;
+		},
+		
+		// filterMoves(pokemon) {
+		// 	return pokemon.moves.filter((item) => {
+		// 		let include = false;
+		// 		for (let version of item.version_group_details) {
+		// 			// console.log(version.version_group);
+		// 			if(version.version_group.name == "sword-shield" && version.move_learn_method.name == "level-up") {
+		// 				include = true;
+		// 			}
+		// 		}
+		// 		return include;
+		// 	});
+		// }
 	},
 	computed: {
-		filtered_pokemons() {
+		filteredPokemons() {
 			return this.pokemons.filter((item)=>{
 				return item.name.includes(this.search)
 			})
